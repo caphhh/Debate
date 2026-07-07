@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI辩论赛计时器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部信息栏 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .team-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .team-badge {
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .pro-side {
+            background: #e74c3c;
+        }
+
+        .con-side {
+            background: #3498db;
+        }
+
+        .topic {
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            flex: 1;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background 0.3s;
+            position: relative;
+        }
+
+        .topic:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .topic-edit-hint {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+
+        .topic:hover .topic-edit-hint {
+            opacity: 0.7;
+        }
+
+        .team-name {
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 3px 8px;
+            border-radius: 5px;
+            transition: background 0.3s;
+            position: relative;
+        }
+
+        .team-name:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .team-name .edit-hint {
+            position: absolute;
+            top: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+
+        .team-name:hover .edit-hint {
+            opacity: 0.7;
+        }
+
+        .pro-team {
+            color: #e74c3c;
+        }
+
+        .con-team {
+            color: #3498db;
+        }
+
+        /* 编辑按钮 - 右上角 */
+        .edit-settings-btn {
+            position: fixed;
+            top: 20px;
+            right: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            z-index: 101;
+        }
+
+        .edit-settings-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        /* 环节标题 */
+        .stage-title {
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .speaker-info {
+            font-size: 24px;
+            text-align: center;
+            opacity: 0.9;
+        }
+
+        /* 计时器区域 */
+        .timer-container {
+            display: flex;
+            gap: 60px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .timer-box {
+            text-align: center;
+            min-width: 300px;
+            flex: 1;
+        }
+
+        .timer-label {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .timer-display {
+            font-size: 180px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            line-height: 1;
+        }
+
+        .pro-timer {
+            color: #e74c3c;
+        }
+
+        .con-timer {
+            color: #3498db;
+        }
+
+        .timer-warning {
+            animation: warning 0.5s ease-in-out infinite;
+        }
+
+        @keyframes warning {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 独立计时按钮组 */
+        .independent-controls {
+            display: none;
+            gap: 30px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .independent-controls.show {
+            display: flex;
+        }
+
+        .independent-btn-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-individual {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 80px;
+        }
+
+        .btn-individual:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-individual.start {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .btn-individual.pause {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-individual.reset {
+            background: #e74c3c;
+            color: white;
+        }
+
+        /* 控制面板 */
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-start {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .btn-pause {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-reset {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-next {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .btn-prev {
+            background: #34495e;
+            color: white;
+        }
+
+        .btn-edit {
+            background: #1abc9c;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 环节列表 */
+        .stages-list {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .stage-item {
+            padding: 8px 12px;
+            margin: 4px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .stage-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .stage-item.active {
+            background: rgba(46, 204, 113, 0.3);
+            font-weight: bold;
+        }
+
+        .stage-item.completed {
+            opacity: 0.5;
+        }
+
+        /* 编辑模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #2c3e50;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .setting-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .setting-section h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #2ecc71;
+        }
+
+        .setting-row {
+            margin: 15px 0;
+        }
+
+        .setting-row label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .setting-row input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+        }
+
+        .setting-row input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .stage-editor {
+            margin: 10px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .stage-editor label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .stage-editor input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+
+        .save-btn {
+            background: #2ecc71;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2ecc71, #3498db);
+            transition: width 0.1s linear;
+        }
+
+        /* 提示信息 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(46, 204, 113, 0.9);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .timer-display {
+                font-size: 120px;
+            }
+            
+            .stage-title {
+                font-size: 36px;
+            }
+            
+            .topic {
+                font-size: 20px;
+            }
+            
+            .stages-list {
+                display: none;
+            }
+        }
+
+        /* 静音按钮 */
+        .mute-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 100;
+        }
+
+        .mute-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 首页样式 */
+        .home-screen {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .home-screen h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .home-screen p {
+            font-size: 24px;
+            margin-bottom: 40px;
+            opacity: 0.8;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #2ecc71, #3498db);
+            color: white;
+            padding: 20px 60px;
+            border: none;
+            border-radius: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 自定义时间输入 */
+        .time-input-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .time-input {
+            width: 80px;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .time-input-label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        /* 环节说明 */
+        .stage-description {
+            font-size: 18px;
+            text-align: center;
+            max-width: 800px;
+            line-height: 1.6;
+            opacity: 0.9;
+            margin-top: 20px;
+        }
+
+        /* 全屏按钮 */
+        .fullscreen-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            z-index: 100;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 试听按钮 - 左下角 */
+        .sound-test-container {
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            z-index: 100;
+        }
+
+        .sound-test-title {
+            font-size: 14px;
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+
+        .sound-test-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-sound-test {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .btn-sound-test:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* 独立计时器标签 */
+        .timer-status {
+            font-size: 16px;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 首页 -->
+        <div id="homeScreen" class="home-screen">
+            <h1>🎤 AI辩论赛计时器</h1>
+            <p>辩题：<span id="homeTopic">AI产品应先实现用户价值，还是商业价值？</span></p>
+            <p>正方：<span id="homeProTeam">U First</span>（<span id="homeProView">先实现用户价值</span>） | 反方：<span id="homeConTeam">铁血商团</span>（<span id="homeConView">先实现商业价值</span>）</p>
+            <button class="start-btn" onclick="startDebate()">开始辩论赛</button>
+        </div>
+
+        <!-- 辩论赛主界面 -->
+        <div id="debateScreen" style="display: none;">
+            <!-- 顶部信息栏 -->
+            <div class="header">
+                <div class="team-info">
+                    <div class="team-badge pro-side">正方</div>
+                    <div class="team-name pro-team" id="proTeamDisplay" onclick="editTeamName('pro')">
+                        U First
+                        <span class="edit-hint">点击修改</span>
+                    </div>
+                </div>
+                <div class="topic" id="topicDisplay" onclick="editTopic()">
+                    AI产品应先实现用户价值，还是商业价值？
+                    <span class="topic-edit-hint">点击修改辩题</span>
+                </div>
+                <div class="team-info">
+                    <div class="team-name con-team" id="conTeamDisplay" onclick="editTeamName('con')">
+                        铁血商团
+                        <span class="edit-hint">点击修改</span>
+                    </div>
+                    <div class="team-badge con-side">反方</div>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="main-content">
+                <div class="stage-title" id="stageTitle">开篇立论环节</div>
+                <div class="speaker-info" id="speakerInfo">正方一辩立论陈词</div>
+                
+                <div class="timer-container" id="timerContainer">
+                    <!-- 单侧计时 -->
+                    <div class="timer-box" id="singleTimerBox" style="display: none;">
+                        <div class="timer-label" id="singleTimerLabel">正方</div>
+                        <div class="timer-display pro-timer" id="singleTimer">03:30</div>
+                    </div>
+                    
+                    <!-- 双侧计时 -->
+                    <div class="timer-box" id="proTimerBox">
+                        <div class="timer-label pro-team" id="proTimerLabel">正方</div>
+                        <div class="timer-display pro-timer" id="proTimer">03:30</div>
+                        <div class="timer-status" id="proTimerStatus"></div>
+                    </div>
+                    <div class="timer-box" id="conTimerBox">
+                        <div class="timer-label con-team" id="conTimerLabel">反方</div>
+                        <div class="timer-display con-timer" id="conTimer">03:30</div>
+                        <div class="timer-status" id="conTimerStatus"></div>
+                    </div>
+                </div>
+
+                <!-- 独立计时控制按钮 -->
+                <div class="independent-controls" id="independentControls">
+                    <div class="independent-btn-group">
+                        <span style="color: #e74c3c; font-weight: bold;" id="proTeamLabel">正方:</span>
+                        <button class="btn-individual start" id="proStartBtn" onclick="startIndependentTimer('pro')">▶ 开始</button>
+                        <button class="btn-individual pause" id="proPauseBtn" onclick="pauseIndependentTimer('pro')" disabled>⏸ 暂停</button>
+                        <button class="btn-individual reset" id="proResetBtn" onclick="resetIndependentTimer('pro')">↺ 重置</button>
+                    </div>
+                    <div class="independent-btn-group">
+                        <span style="color: #3498db; font-weight: bold;" id="conTeamLabel">反方:</span>
+                        <button class="btn-individual start" id="conStartBtn" onclick="startIndependentTimer('con')">▶ 开始</button>
+                        <button class="btn-individual pause" id="conPauseBtn" onclick="pauseIndependentTimer('con')" disabled>⏸ 暂停</button>
+                        <button class="btn-individual reset" id="conResetBtn" onclick="resetIndependentTimer('con')">↺ 重置</button>
+                    </div>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+
+                <div class="stage-description" id="stageDescription">
+                    双方各有3分30秒对己方观点进行立论陈词
+                </div>
+            </div>
+
+            <!-- 控制面板 -->
+            <div class="controls">
+                <button class="btn btn-start" id="startBtn" onclick="startTimer()">▶ 开始</button>
+                <button class="btn btn-pause" id="pauseBtn" onclick="pauseTimer()" disabled>⏸ 暂停</button>
+                <button class="btn btn-reset" id="resetBtn" onclick="resetStage()">↺ 重置</button>
+                <button class="btn btn-prev" id="prevBtn" onclick="previousStage()">← 上一环节</button>
+                <button class="btn btn-next" id="nextBtn" onclick="nextStage()">下一环节 →</button>
+                <button class="btn btn-edit" onclick="openEditModal()">✎ 编辑时间</button>
+            </div>
+        </div>
+
+        <!-- 环节列表 -->
+        <div class="stages-list" id="stagesList"></div>
+
+        <!-- 试听提示音 - 左下角 -->
+        <div class="sound-test-container">
+            <div class="sound-test-title">🔔 试听提示音</div>
+            <div class="sound-test-buttons">
+                <button class="btn-sound-test" onclick="testSound('warning')">30秒警示</button>
+                <button class="btn-sound-test" onclick="testSound('countdown')">5秒倒计时</button>
+                <button class="btn-sound-test" onclick="testSound('end')">时间到</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置编辑模态框 -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">⚙️ 辩论赛设置</div>
+                <button class="close-btn" onclick="closeSettingsModal()">×</button>
+            </div>
+            
+            <div class="setting-section">
+                <h3>📋 基本信息</h3>
+                <div class="setting-row">
+                    <label>辩题：</label>
+                    <input type="text" id="settingTopic" placeholder="请输入辩题">
+                </div>
+                <div class="setting-row">
+                    <label>正方队名：</label>
+                    <input type="text" id="settingProTeam" placeholder="请输入正方队名">
+                </div>
+                <div class="setting-row">
+                    <label>正方观点：</label>
+                    <input type="text" id="settingProView" placeholder="请输入正方观点">
+                </div>
+                <div class="setting-row">
+                    <label>反方队名：</label>
+                    <input type="text" id="settingConTeam" placeholder="请输入反方队名">
+                </div>
+                <div class="setting-row">
+                    <label>反方观点：</label>
+                    <input type="text" id="settingConView" placeholder="请输入反方观点">
+                </div>
+            </div>
+            
+            <button class="save-btn" onclick="saveSettings()">💾 保存设置</button>
+        </div>
+    </div>
+
+    <!-- 时间编辑模态框 -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">编辑环节时间</div>
+                <button class="close-btn" onclick="closeEditModal()">×</button>
+            </div>
+            <div id="stageEditors"></div>
+            <button class="save-btn" onclick="saveEdits()">保存修改</button>
+        </div>
+    </div>
+
+    <!-- 提示消息 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 全屏按钮 -->
+    <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ 全屏</button>
+
+    <!-- 设置按钮 -->
+    <button class="edit-settings-btn" onclick="openSettingsModal()">⚙️ 设置</button>
+
+    <!-- 静音按钮 -->
+    <button class="mute-btn" id="muteBtn" onclick="toggleMute()">🔊</button>
+
+    <script>
+        // 默认设置
+        const defaultSettings = {
+            topic: 'AI产品应先实现用户价值，还是商业价值？',
+            proTeam: 'U First',
+            proView: '先实现用户价值',
+            conTeam: '铁血商团',
+            conView: '先实现商业价值'
+        };
+
+        // 加载设置
+        function loadSettings() {
+            const saved = localStorage.getItem('debateSettings');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return {...defaultSettings};
+        }
+
+        // 保存设置
+        function saveSettingsData(settings) {
+            localStorage.setItem('debateSettings', JSON.stringify(settings));
+        }
+
+        // 辩论环节定义
+        const stages = [
+            {
+                id: 0,
+                title: "开场介绍",
+                speaker: "双方辩手自我介绍",
+                description: "请正方、反方辩手依次自我介绍",
+                duration: 0,
+                type: "intro",
+                timerType: "none"
+            },
+            {
+                id: 1,
+                title: "开篇立论环节",
+                speaker: "正方一辩",
+                description: "正方一辩进行立论陈词",
+                duration: 210,
+                type: "single",
+                timerType: "pro",
+                team: "pro"
+            },
+            {
+                id: 2,
+                title: "开篇立论环节",
+                speaker: "反方四辩质询正方一辩",
+                description: "质询环节为单边计时，只计质询方时间",
+                duration: 90,
+                type: "single",
+                timerType: "con",
+                team: "con"
+            },
+            {
+                id: 3,
+                title: "开篇立论环节",
+                speaker: "反方一辩",
+                description: "反方一辩进行立论陈词",
+                duration: 210,
+                type: "single",
+                timerType: "con",
+                team: "con"
+            },
+            {
+                id: 4,
+                title: "开篇立论环节",
+                speaker: "正方四辩质询反方一辩",
+                description: "质询环节为单边计时，只计质询方时间",
+                duration: 90,
+                type: "single",
+                timerType: "pro",
+                team: "pro"
+            },
+            {
+                id: 5,
+                title: "驳论环节",
+                speaker: "正方二辩",
+                description: "正方二辩针对对方立论作驳论",
+                duration: 120,
+                type: "single",
+                timerType: "pro",
+                team: "pro"
+            },
+            {
+                id: 6,
+                title: "驳论环节",
+                speaker: "反方二辩",
+                description: "反方二辩针对对方立论作驳论",
+                duration: 120,
+                type: "single",
+                timerType: "con",
+                team: "con"
+            },
+            {
+                id: 7,
+                title: "1v1对辩",
+                speaker: "正方二辩 vs 反方二辩",
+                description: "双方以交替形式轮流发言，时间各1分30秒。每方有独立的开始/暂停按钮",
+                duration: 90,
+                type: "independent",
+                timerType: "both"
+            },
+            {
+                id: 8,
+                title: "盘问环节",
+                speaker: "正方三辩质询",
+                description: "三辩可以质询对方任何辩手（除三辩），单边计时",
+                duration: 120,
+                type: "single",
+                timerType: "pro",
+                team: "pro"
+            },
+            {
+                id: 9,
+                title: "盘问环节",
+                speaker: "反方三辩质询",
+                description: "三辩可以质询对方任何辩手（除三辩），单边计时",
+                duration: 120,
+                type: "single",
+                timerType: "con",
+                team: "con"
+            },
+            {
+                id: 10,
+                title: "攻辩小结",
+                speaker: "正方三辩",
+                description: "正方三辩对质询环节进行总结反驳",
+                duration: 90,
+                type: "single",
+                timerType: "pro",
+                team: "pro"
+            },
+            {
+                id: 11,
+                title: "攻辩小结",
+                speaker: "反方三辩",
+                description: "反方三辩对质询环节进行总结反驳",
+                duration: 90,
+                type: "single",
+                timerType: "con",
+                team: "con"
+            },
+            {
+                id: 12,
+                title: "自由辩论",
+                speaker: "正方开始",
+                description: "时间各4分钟，由正方开始发言。每方有独立的开始/暂停按钮",
+                duration: 240,
+                type: "independent",
+                timerType: "both"
+            },
+            {
+                id: 13,
+                title: "总结陈词",
+                speaker: "反方五辩",
+                description: "反方五辩总结陈词，陈述和申论本方论点",
+                duration: 210,
+                type: "single",
+                timerType: "con",
+                team: "con"
+            },
+            {
+                id: 14,
+                title: "总结陈词",
+                speaker: "正方五辩",
+                description: "正方五辩总结陈词，陈述和申论本方论点",
+                duration: 210,
+                type: "single",
+                timerType: "pro",
+                team: "pro"
+            },
+            {
+                id: 15,
+                title: "老师点评",
+                speaker: "邀请老师点评",
+                description: "请老师对本次辩论进行点评",
+                duration: 0,
+                type: "intro",
+                timerType: "none"
+            },
+            {
+                id: 16,
+                title: "辩论结束",
+                speaker: "感谢致辞",
+                description: "感谢各位辩手和老师，辩论赛圆满结束！",
+                duration: 0,
+                type: "intro",
+                timerType: "none"
+            }
+        ];
+
+        let currentStage = 0;
+        let timerInterval = null;
+        let timeRemaining = 0;
+        let totalTime = 0;
+        let isRunning = false;
+        let isMuted = false;
+        let proTimeRemaining = 0;
+        let conTimeRemaining = 0;
+        let proTotalTime = 0;
+        let conTotalTime = 0;
+        
+        // 独立计时相关变量
+        let independentProInterval = null;
+        let independentConInterval = null;
+        let independentProRunning = false;
+        let independentConRunning = false;
+        let countdownBeepsPlayed = 0;
+
+        // 加载设置并更新显示
+        function applySettings() {
+            const settings = loadSettings();
+            
+            // 更新首页
+            document.getElementById('homeTopic').textContent = settings.topic;
+            document.getElementById('homeProTeam').textContent = settings.proTeam;
+            document.getElementById('homeProView').textContent = settings.proView;
+            document.getElementById('homeConTeam').textContent = settings.conTeam;
+            document.getElementById('homeConView').textContent = settings.conView;
+            
+            // 更新辩论界面
+            document.getElementById('topicDisplay').childNodes[0].textContent = settings.topic + ' ';
+            document.getElementById('proTeamDisplay').childNodes[0].textContent = settings.proTeam + ' ';
+            document.getElementById('conTeamDisplay').childNodes[0].textContent = settings.conTeam + ' ';
+            
+            // 更新独立计时标签
+            document.getElementById('proTeamLabel').textContent = settings.proTeam + ':';
+            document.getElementById('conTeamLabel').textContent = settings.conTeam + ':';
+        }
+
+        // 编辑辩题
+        function editTopic() {
+            openSettingsModal();
+        }
+
+        // 编辑队名
+        function editTeamName(side) {
+            openSettingsModal();
+        }
+
+        // 打开设置模态框
+        function openSettingsModal() {
+            const settings = loadSettings();
+            document.getElementById('settingTopic').value = settings.topic;
+            document.getElementById('settingProTeam').value = settings.proTeam;
+            document.getElementById('settingProView').value = settings.proView;
+            document.getElementById('settingConTeam').value = settings.conTeam;
+            document.getElementById('settingConView').value = settings.conView;
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+
+        // 关闭设置模态框
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        // 保存设置
+        function saveSettings() {
+            const settings = {
+                topic: document.getElementById('settingTopic').value || '请输入辩题',
+                proTeam: document.getElementById('settingProTeam').value || '正方',
+                proView: document.getElementById('settingProView').value || '',
+                conTeam: document.getElementById('settingConTeam').value || '反方',
+                conView: document.getElementById('settingConView').value || ''
+            };
+            
+            saveSettingsData(settings);
+            applySettings();
+            closeSettingsModal();
+            showToast('设置已保存');
+        }
+
+        // 初始化
+        function init() {
+            applySettings();
+            renderStagesList();
+            updateDisplay();
+        }
+
+        // 渲染环节列表
+        function renderStagesList() {
+            const list = document.getElementById('stagesList');
+            list.innerHTML = '';
+            stages.forEach((stage, index) => {
+                const item = document.createElement('div');
+                item.className = 'stage-item';
+                if (index === currentStage) item.classList.add('active');
+                if (index < currentStage) item.classList.add('completed');
+                item.textContent = `${index + 1}. ${stage.title}`;
+                item.onclick = () => goToStage(index);
+                list.appendChild(item);
+            });
+        }
+
+        // 开始辩论赛
+        function startDebate() {
+            document.getElementById('homeScreen').style.display = 'none';
+            document.getElementById('debateScreen').style.display = 'block';
+            currentStage = 0;
+            renderStagesList();
+            updateDisplay();
+        }
+
+        // 跳转到指定环节
+        function goToStage(index) {
+            if (isRunning) {
+                pauseTimer();
+            }
+            stopIndependentTimers();
+            currentStage = index;
+            resetStage();
+            renderStagesList();
+            updateDisplay();
+        }
+
+        // 更新显示
+        function updateDisplay() {
+            const stage = stages[currentStage];
+            document.getElementById('stageTitle').textContent = stage.title;
+            document.getElementById('speakerInfo').textContent = stage.speaker;
+            document.getElementById('stageDescription').textContent = stage.description;
+
+            const timerContainer = document.getElementById('timerContainer');
+            const singleTimerBox = document.getElementById('singleTimerBox');
+            const proTimerBox = document.getElementById('proTimerBox');
+            const conTimerBox = document.getElementById('conTimerBox');
+            const independentControls = document.getElementById('independentControls');
+
+            if (stage.timerType === 'none') {
+                timerContainer.style.display = 'none';
+                independentControls.classList.remove('show');
+            } else if (stage.type === 'independent') {
+                // 独立计时模式
+                singleTimerBox.style.display = 'none';
+                proTimerBox.style.display = 'block';
+                conTimerBox.style.display = 'block';
+                document.getElementById('proTimerLabel').textContent = '正方';
+                document.getElementById('conTimerLabel').textContent = '反方';
+                independentControls.classList.add('show');
+            } else if (stage.timerType === 'both') {
+                // 普通双侧计时
+                singleTimerBox.style.display = 'none';
+                proTimerBox.style.display = 'block';
+                conTimerBox.style.display = 'block';
+                independentControls.classList.remove('show');
+            } else {
+                // 单侧计时
+                singleTimerBox.style.display = 'block';
+                proTimerBox.style.display = 'none';
+                conTimerBox.style.display = 'none';
+                document.getElementById('singleTimerLabel').textContent = 
+                    stage.team === 'pro' ? '正方' : '反方';
+                independentControls.classList.remove('show');
+            }
+
+            if (stage.timerType !== 'none') {
+                timerContainer.style.display = 'flex';
+                if (stage.duration > 0) {
+                    if (stage.type === 'independent') {
+                        proTimeRemaining = stage.duration;
+                        conTimeRemaining = stage.duration;
+                        proTotalTime = stage.duration;
+                        conTotalTime = stage.duration;
+                        updateIndependentTimerDisplay();
+                    } else {
+                        timeRemaining = stage.duration;
+                        totalTime = stage.duration;
+                        if (stage.timerType === 'both') {
+                            proTimeRemaining = stage.duration;
+                            conTimeRemaining = stage.duration;
+                            proTotalTime = stage.duration;
+                            conTotalTime = stage.duration;
+                        }
+                        updateTimerDisplay();
+                    }
+                } else {
+                    timeRemaining = 0;
+                    totalTime = 1;
+                    updateTimerDisplay();
+                }
+            }
+
+            updateButtons();
+            renderStagesList();
+        }
+
+        // 更新计时器显示
+        function updateTimerDisplay() {
+            const stage = stages[currentStage];
+            
+            if (stage.timerType === 'both' && stage.type !== 'independent') {
+                document.getElementById('proTimer').textContent = formatTime(proTimeRemaining);
+                document.getElementById('conTimer').textContent = formatTime(conTimeRemaining);
+                
+                // 更新进度条
+                const proProgress = proTotalTime > 0 ? (proTimeRemaining / proTotalTime) * 100 : 0;
+                const conProgress = conTotalTime > 0 ? (conTimeRemaining / conTotalTime) * 100 : 0;
+                document.getElementById('progressFill').style.width = 
+                    Math.min(proProgress, conProgress) + '%';
+            } else {
+                document.getElementById('singleTimer').textContent = formatTime(timeRemaining);
+                const progress = totalTime > 0 ? (timeRemaining / totalTime) * 100 : 0;
+                document.getElementById('progressFill').style.width = progress + '%';
+            }
+
+            // 添加警告样式
+            if (timeRemaining <= 30 && timeRemaining > 0) {
+                document.querySelectorAll('.timer-display').forEach(el => {
+                    el.classList.add('timer-warning');
+                });
+            } else {
+                document.querySelectorAll('.timer-display').forEach(el => {
+                    el.classList.remove('timer-warning');
+                });
+            }
+        }
+
+        // 更新独立计时器显示
+        function updateIndependentTimerDisplay() {
+            document.getElementById('proTimer').textContent = formatTime(proTimeRemaining);
+            document.getElementById('conTimer').textContent = formatTime(conTimeRemaining);
+            
+            // 更新状态显示
+            document.getElementById('proTimerStatus').textContent = independentProRunning ? '⏱ 计时中' : '';
+            document.getElementById('conTimerStatus').textContent = independentConRunning ? '⏱ 计时中' : '';
+            
+            // 更新按钮状态
+            document.getElementById('proStartBtn').disabled = independentProRunning;
+            document.getElementById('proPauseBtn').disabled = !independentProRunning;
+            document.getElementById('conStartBtn').disabled = independentConRunning;
+            document.getElementById('conPauseBtn').disabled = !independentConRunning;
+            
+            // 添加警告样式
+            if (proTimeRemaining <= 30 && proTimeRemaining > 0) {
+                document.getElementById('proTimer').classList.add('timer-warning');
+            } else {
+                document.getElementById('proTimer').classList.remove('timer-warning');
+            }
+            
+            if (conTimeRemaining <= 30 && conTimeRemaining > 0) {
+                document.getElementById('conTimer').classList.add('timer-warning');
+            } else {
+                document.getElementById('conTimer').classList.remove('timer-warning');
+            }
+        }
+
+        // 格式化时间
+        function formatTime(seconds) {
+            if (seconds <= 0) return '00:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // 更新按钮状态
+        function updateButtons() {
+            const stage = stages[currentStage];
+            document.getElementById('startBtn').disabled = isRunning || stage.duration === 0 || stage.type === 'independent';
+            document.getElementById('pauseBtn').disabled = !isRunning;
+            document.getElementById('prevBtn').disabled = currentStage === 0;
+            document.getElementById('nextBtn').disabled = currentStage === stages.length - 1;
+        }
+
+        // 开始计时
+        function startTimer() {
+            if (isRunning) return;
+            
+            const stage = stages[currentStage];
+            if (stage.duration === 0 || stage.type === 'independent') return;
+
+            isRunning = true;
+            countdownBeepsPlayed = 0;
+            updateButtons();
+
+            if (stage.timerType === 'both') {
+                timerInterval = setInterval(() => {
+                    if (proTimeRemaining > 0) proTimeRemaining--;
+                    if (conTimeRemaining > 0) conTimeRemaining--;
+                    updateTimerDisplay();
+                    
+                    // 30秒警示音
+                    if (proTimeRemaining === 30 || conTimeRemaining === 30) {
+                        playWarningSound();
+                    }
+                    
+                    // 5秒倒计时
+                    if (proTimeRemaining <= 5 && proTimeRemaining > 0) {
+                        playCountdownSound(6 - proTimeRemaining);
+                        countdownBeepsPlayed = 6 - proTimeRemaining;
+                    }
+                    if (conTimeRemaining <= 5 && conTimeRemaining > 0) {
+                        playCountdownSound(6 - conTimeRemaining);
+                        countdownBeepsPlayed = 6 - conTimeRemaining;
+                    }
+                    
+                    if (proTimeRemaining <= 0 || conTimeRemaining <= 0) {
+                        playEndTimeSound();
+                        pauseTimer();
+                    }
+                }, 1000);
+            } else {
+                timerInterval = setInterval(() => {
+                    if (timeRemaining > 0) {
+                        timeRemaining--;
+                        updateTimerDisplay();
+                        
+                        // 30秒警示音
+                        if (timeRemaining === 30) {
+                            playWarningSound();
+                        }
+                        
+                        // 5秒倒计时
+                        if (timeRemaining <= 5 && timeRemaining > 0) {
+                            playCountdownSound(6 - timeRemaining);
+                            countdownBeepsPlayed = 6 - timeRemaining;
+                        }
+                        
+                        if (timeRemaining === 0) {
+                            playEndTimeSound();
+                            pauseTimer();
+                        }
+                    }
+                }, 1000);
+            }
+        }
+
+        // 暂停计时
+        function pauseTimer() {
+            if (!isRunning) return;
+            
+            isRunning = false;
+            clearInterval(timerInterval);
+            updateButtons();
+        }
+
+        // 独立计时器 - 正方
+        function startIndependentTimer(team) {
+            const stage = stages[currentStage];
+            if (team === 'pro' && !independentProRunning) {
+                independentProRunning = true;
+                countdownBeepsPlayed = 0;
+                updateIndependentTimerDisplay();
+                
+                independentProInterval = setInterval(() => {
+                    if (proTimeRemaining > 0) {
+                        proTimeRemaining--;
+                        updateIndependentTimerDisplay();
+                        
+                        // 30秒警示音
+                        if (proTimeRemaining === 30) {
+                            playWarningSound();
+                        }
+                        
+                        // 5秒倒计时
+                        if (proTimeRemaining <= 5 && proTimeRemaining > 0) {
+                            playCountdownSound(6 - proTimeRemaining);
+                            countdownBeepsPlayed = 6 - proTimeRemaining;
+                        }
+                        
+                        if (proTimeRemaining === 0) {
+                            playEndTimeSound();
+                            independentProRunning = false;
+                            updateIndependentTimerDisplay();
+                        }
+                    } else {
+                        independentProRunning = false;
+                        updateIndependentTimerDisplay();
+                    }
+                }, 1000);
+            } else if (team === 'con' && !independentConRunning) {
+                independentConRunning = true;
+                countdownBeepsPlayed = 0;
+                updateIndependentTimerDisplay();
+                
+                independentConInterval = setInterval(() => {
+                    if (conTimeRemaining > 0) {
+                        conTimeRemaining--;
+                        updateIndependentTimerDisplay();
+                        
+                        // 30秒警示音
+                        if (conTimeRemaining === 30) {
+                            playWarningSound();
+                        }
+                        
+                        // 5秒倒计时
+                        if (conTimeRemaining <= 5 && conTimeRemaining > 0) {
+                            playCountdownSound(6 - conTimeRemaining);
+                            countdownBeepsPlayed = 6 - conTimeRemaining;
+                        }
+                        
+                        if (conTimeRemaining === 0) {
+                            playEndTimeSound();
+                            independentConRunning = false;
+                            updateIndependentTimerDisplay();
+                        }
+                    } else {
+                        independentConRunning = false;
+                        updateIndependentTimerDisplay();
+                    }
+                }, 1000);
+            }
+        }
+
+        // 暂停独立计时器
+        function pauseIndependentTimer(team) {
+            if (team === 'pro' && independentProRunning) {
+                independentProRunning = false;
+                clearInterval(independentProInterval);
+                updateIndependentTimerDisplay();
+            } else if (team === 'con' && independentConRunning) {
+                independentConRunning = false;
+                clearInterval(independentConInterval);
+                updateIndependentTimerDisplay();
+            }
+        }
+
+        // 重置独立计时器
+        function resetIndependentTimer(team) {
+            const stage = stages[currentStage];
+            
+            if (team === 'pro') {
+                independentProRunning = false;
+                clearInterval(independentProInterval);
+                proTimeRemaining = stage.duration;
+                proTotalTime = stage.duration;
+                countdownBeepsPlayed = 0;
+            } else if (team === 'con') {
+                independentConRunning = false;
+                clearInterval(independentConInterval);
+                conTimeRemaining = stage.duration;
+                conTotalTime = stage.duration;
+                countdownBeepsPlayed = 0;
+            }
+            
+            updateIndependentTimerDisplay();
+        }
+
+        // 停止所有独立计时器
+        function stopIndependentTimers() {
+            independentProRunning = false;
+            independentConRunning = false;
+            clearInterval(independentProInterval);
+            clearInterval(independentConInterval);
+            countdownBeepsPlayed = 0;
+        }
+
+        // 重置环节
+        function resetStage() {
+            pauseTimer();
+            stopIndependentTimers();
+            const stage = stages[currentStage];
+            
+            if (stage.type === 'independent') {
+                proTimeRemaining = stage.duration;
+                conTimeRemaining = stage.duration;
+                proTotalTime = stage.duration;
+                conTotalTime = stage.duration;
+                updateIndependentTimerDisplay();
+            } else if (stage.timerType === 'both') {
+                proTimeRemaining = stage.duration;
+                conTimeRemaining = stage.duration;
+                proTotalTime = stage.duration;
+                conTotalTime = stage.duration;
+            } else {
+                timeRemaining = stage.duration;
+                totalTime = stage.duration;
+            }
+            
+            updateTimerDisplay();
+        }
+
+        // 下一个环节
+        function nextStage() {
+            if (currentStage < stages.length - 1) {
+                currentStage++;
+                resetStage();
+                updateDisplay();
+                showToast(`已进入下一环节：${stages[currentStage].title}`);
+            }
+        }
+
+        // 上一个环节
+        function previousStage() {
+            if (currentStage > 0) {
+                currentStage--;
+                resetStage();
+                updateDisplay();
+                showToast(`返回上一环节：${stages[currentStage].title}`);
+            }
+        }
+
+        // ==================== 提示音系统（柔和版本）====================
+        
+        // 创建柔和的音频上下文
+        function createSoftAudioContext() {
+            return new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        // 播放30秒警示音（柔和的铃声音效）
+        function playWarningSound() {
+            if (isMuted) return;
+            
+            const audioContext = createSoftAudioContext();
+            
+            // 使用更柔和的正弦波，类似风铃声
+            const notes = [523.25, 659.25, 783.99]; // C5, E5, G5 - 和弦音
+            const durations = [0.3, 0.3, 0.5];
+            
+            notes.forEach((freq, i) => {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = freq;
+                    oscillator.type = 'sine';
+                    
+                    // 柔和的包络
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + 0.05);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + durations[i]);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + durations[i]);
+                }, i * 400);
+            });
+        }
+
+        // 播放5秒倒计时提示音（轻柔的"滴"声）
+        function playCountdownSound(second) {
+            if (isMuted) return;
+            
+            const audioContext = createSoftAudioContext();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // 更柔和的频率
+            oscillator.frequency.value = 600;
+            oscillator.type = 'sine';
+            
+            // 短促柔和的包络
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.15);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.15);
+        }
+
+        // 播放结束音（温和的提示音）
+        function playEndTimeSound() {
+            if (isMuted) return;
+            
+            const audioContext = createSoftAudioContext();
+            
+            // 播放一个温和的下行音阶
+            const frequencies = [400, 350, 300];
+            
+            frequencies.forEach((freq, i) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = freq;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime + i * 0.3);
+                gainNode.gain.linearRampToValueAtTime(0.12, audioContext.currentTime + i * 0.3 + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + i * 0.3 + 0.4);
+                
+                oscillator.start(audioContext.currentTime + i * 0.3);
+                oscillator.stop(audioContext.currentTime + i * 0.3 + 0.4);
+            });
+        }
+
+        // 试听各种提示音
+        function testSound(type) {
+            if (type === 'warning') {
+                playWarningSound();
+                showToast('试听：30秒警示音');
+            } else if (type === 'countdown') {
+                // 试听5秒倒计时
+                for (let i = 1; i <= 5; i++) {
+                    setTimeout(() => {
+                        playCountdownSound(i);
+                    }, i * 800);
+                }
+                showToast('试听：5秒倒计时');
+            } else if (type === 'end') {
+                playEndTimeSound();
+                showToast('试听：时间到');
+            }
+        }
+
+        // 切换静音
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
+            showToast(isMuted ? '已静音' : '已取消静音');
+        }
+
+        // 切换全屏
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // 显示提示消息
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 打开时间编辑模态框
+        function openEditModal() {
+            const modal = document.getElementById('editModal');
+            const editors = document.getElementById('stageEditors');
+            editors.innerHTML = '';
+
+            stages.forEach((stage, index) => {
+                if (stage.duration > 0) {
+                    const editor = document.createElement('div');
+                    editor.className = 'stage-editor';
+                    editor.innerHTML = `
+                        <label>环节 ${index + 1}: ${stage.title}</label>
+                        <div class="time-input-container">
+                            <input type="number" class="time-input" id="duration-${index}" 
+                                   value="${Math.floor(stage.duration / 60)}" min="0"> 分
+                            <input type="number" class="time-input" id="seconds-${index}" 
+                                   value="${stage.duration % 60}" min="0" max="59"> 秒
+                        </div>
+                    `;
+                    editors.appendChild(editor);
+                }
+            });
+
+            modal.style.display = 'flex';
+        }
+
+        // 关闭时间编辑模态框
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // 保存时间编辑
+        function saveEdits() {
+            stages.forEach((stage, index) => {
+                if (stage.duration > 0) {
+                    const minutes = parseInt(document.getElementById(`duration-${index}`).value) || 0;
+                    const seconds = parseInt(document.getElementById(`seconds-${index}`).value) || 0;
+                    stage.duration = minutes * 60 + seconds;
+                }
+            });
+
+            resetStage();
+            updateDisplay();
+            closeEditModal();
+            showToast('时间修改已保存');
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    const stage = stages[currentStage];
+                    if (stage.type === 'independent') {
+                        if (independentProRunning) {
+                            pauseIndependentTimer('pro');
+                        } else {
+                            startIndependentTimer('pro');
+                        }
+                    } else if (isRunning) {
+                        pauseTimer();
+                    } else {
+                        startTimer();
+                    }
+                    break;
+                case 'ArrowRight':
+                    nextStage();
+                    break;
+                case 'ArrowLeft':
+                    previousStage();
+                    break;
+                case 'KeyR':
+                    resetStage();
+                    break;
+                case 'KeyF':
+                    toggleFullscreen();
+                    break;
+                case 'KeyM':
+                    toggleMute();
+                    break;
+                case 'KeyP':
+                    if (stage.type === 'independent') {
+                        if (independentProRunning) {
+                            pauseIndependentTimer('pro');
+                        } else {
+                            startIndependentTimer('pro');
+                        }
+                    }
+                    break;
+                case 'KeyC':
+                    if (stage.type === 'independent') {
+                        if (independentConRunning) {
+                            pauseIndependentTimer('con');
+                        } else {
+                            startIndependentTimer('con');
+                        }
+                    }
+                    break;
+            }
+        });
+
+        // 初始化
+        init();
+    </script>
+</body>
+</html>
